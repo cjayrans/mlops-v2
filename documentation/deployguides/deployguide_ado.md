@@ -1,10 +1,9 @@
 # Deployment Guide - Azure DevOps 
 
-This document will guide you through using the MLOps V2 project generator to deploy a single-environment ("Prod") demo project using only Azure DevOps to host source repositories and pipelines. See notes at the end for guidance on multi-environment MLOps and adapting the pattern to your use case.
+This document will guide you through using the MLOps V2 project generator to deploy a multi-environment ("Prod") demo project using only Azure DevOps to host source repositories and pipelines. 
 
 **Prerequisites:**
-- One or more Azure subscription(s) based on whether you are deploying Prod only or Prod and Dev environments
-     - **Important:** - As mentioned in the **Prerequisites** at the beginning [here](https://github.com/Azure/mlops-v2?tab=readme-ov-file#prerequisites), if you plan to use either a Free/Trial or similar learning purpose subscriptions, they might pose 'Usage + quotas' limitations in the default Azure region being used for deployment. Please read provided instructions carefully to succeessfully execute this deployment.
+- Two Azure subscription(s) for Dev and Prod environments. 
 - An Azure DevOps organization
 - Ability to create Azure service principals to access / create Azure resources from Azure DevOps
 - If using Terraform to create and manage infrastructure from Azure DevOps, install the [Terraform extension for Azure DevOps](https://marketplace.visualstudio.com/items?itemName=ms-devlabs.custom-terraform-tasks).
@@ -30,9 +29,9 @@ Below are the three repositories that you will import. They each serve a differe
 
 | Repository | Role |
 | ---        | ---  |
-| https://github.com/Azure/mlops-v2 | The parent MLOps V2 repo. This contains project creation scripts and pipelines and MLOps V2 documentation |
-| https://github.com/Azure/mlops-project-template | This repo contains templates for the supported ML scenarios and their associated ML and CI/CD pipelines. |
-| https://github.com/Azure/mlops-templates | This repo contains Azure ML interface helpers and infrastructure deployment templates. |
+| https://github.com/cjayrans/mlops-v2 | The parent MLOps V2 repo. This contains project creation scripts and pipelines and MLOps V2 documentation |
+| https://github.com/cjayrans/mlops-project-template | This repo contains templates for the supported ML scenarios and their associated ML and CI/CD pipelines. |
+| https://github.com/cjayrans/mlops-templates | This repo contains Azure ML interface helpers and infrastructure deployment templates. |
 
 ---
    1. Navigate to [Azure DevOps](https://go.microsoft.com/fwlink/?LinkId=2014676&githubsi=true&clcid=0x409&WebUserId=2ecdcbf9a1ae497d934540f4edce2b7d) and the organization where you want to create the project. [Create a new organization](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/create-organization?view=azure-devops) for your project, if needed. 
@@ -55,15 +54,15 @@ Below are the three repositories that you will import. They each serve a differe
             <img src="./images/ado-import-repo.png" alt="Import repo into ADO" width="50%" height="50%"/>
          </p>
 
-         Enter https://github.com/Azure/mlops-v2 into the Clone URL field. Click import at the bottom of the page.
+         Enter https://github.com/cjayrans/mlops-v2 into the Clone URL field. Click import at the bottom of the page.
 
          <p align="center">
             <img src="./images/ado-import-mlops-v2.png" alt="Import mlops-v2" width="50%" height="50%"/>
          </p>
 
          At the top of the page, open the Repos drop-down and repeat the import for the following repositories:  
-         - https://github.com/Azure/mlops-project-template
-         - https://github.com/Azure/mlops-templates 
+         - https://github.com/cjayrans/mlops-project-template
+         - https://github.com/cjayrans/mlops-templates 
 
          <p align="center">
             <img src="./images/ado-import-mlops-templates.png" alt="Import mlops-templates" width="50%" height="50%"/>
@@ -189,13 +188,13 @@ In this step, you will run an Azure DevOps pipeline, `initialise-project`, that 
      - Choose **cv** for a computer vision project
      - Choose **nlp** for natural language  projects
    - **MLOps Interface**: Select the interface to the Azure ML platform, either CLI or SDK.
-     - Choose **aml-cli-v2** for the Azure ML CLI v2 interface. This is supported for all ML project types.
+     - Choose **aml-cli-v2** for the Azure ML CLI v2 interface. This is supported for all ML project types. **(Recommended)**
      - Choose **python-sdk-v1** to use the Azure ML python SDK v1 for training and deployment of your model. This is supported for Classical and CV project types.
      - Choose **python-sdk-v2** to use the Azure ML python SDK v2 for training and deployment of your model. This is supported for Classical and NLP project types.
      - Choose **rai-aml-cli-v2** to use the Responsible AI cli tools for training and deployment of your model. This is supported only for Classical project types at this time.
 
    - **Infrastructure Provider**: Choose the provider to use to deploy Azure infrastructure for your project.
-     - Choose **Bicep** to deploy using Azure Bicep templates
+     - Choose **Bicep** to deploy using Azure Bicep templates. **(Recommended)**
      - Choose **terraform** to use terraform based templates. 
 
    
@@ -301,32 +300,33 @@ For Azure DevOps pipelines to create Azure Machine Learning infrastructure and d
    </p>
 
 
-3. Go through the process of creating a Service Principle (SP) selecting "Accounts in any organizational directory (Any Azure AD directory - Multitenant)" and name it  "Azure-ARM-Dev-ProjectName". Once created, repeat and create a new SP named "Azure-ARM-Prod-ProjectName". Please replace "ProjectName" with the name of your project so that the service principal can be uniquely identified. 
+3. Go through the process of creating a Service Principle (SP) selecting "Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant)" and name it  "Azure-ARM-Dev-TFR". Once created, repeat and create a new SP named "Azure-ARM-Prod-TFR". Please replace "TFR" with any name referencing your project so that the service principal can be uniquely identified - but know the name does not have to match your project name for functional purposes. 
 
+<a id="certificates-secrets-anchor"></a>
 4. Go to "Certificates & Secrets" and add for each SP "New client secret", then store the value and secret seperately.
 
-5. To assign the necessary permissions to these principals, select your respective <a href="https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade?">subscription</a>  and go to **Access control (IAM)**. Select +Add then select "Add Role Assigment.
+5. To assign the necessary permissions to these principals, select your respective <a href="https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade?">subscription</a>  and go to **Access control (IAM)**. Select +Add then select "Add Role Assigment. For example, starting with your 'dev' Azure Subscription:
 
    <p align="center">
                   <img src="./images/SP-setup3.png" alt="Access control"/>
    </p>
 
 
-6. Select Contributor and add members selecting + Select Members. Add the member "Azure-ARM-Dev-ProjectName" as create before.
+6. Select Contributor and add members selecting + Select Members. Add the member "Azure-ARM-Dev-TFR" as create before.
 
    <p align="center">
                   <img src="./images/SP-setup4.png" alt="SP Contributor"/>
    </p>
 
 
-7. Repeat step here, if you deploy Dev and Prod into the same subscription, otherwise change to the prod subscription and repeat with "Azure-ARM-Prod-ProjectName". The basic SP setup is successfully finished.
+7. Repeat steps 5 & 6 for your Prod Azure Subscription, go to **Access control (IAM)**. Select +Add then select "Add Role Assigment. Select Contributor and add members selecting + Select Members. Add the member "Azure-ARM-Prod-TFR" as create before. The basic SP setup is successfully finished.
 </details>
 
 
 ### Create Service Connections
 ---
 
-Select **Project Settings** at the bottom left of the project page and select **Service connections**.
+Navigate back to your Azure DevOps project. Select **Project Settings** at the bottom left of the project page and select **Service connections**.
    
    <p align="left">
       <img src="./images/ado-setup1.png" alt="Service connection" width="30%" height=30%"/>
@@ -336,15 +336,22 @@ Select **Project Settings** at the bottom left of the project page and select **
 Select **Create service connection**
 
 * For service, select **Azure Resource Manager** and **Next**  
-* For authentication method, select **Service principal (manual)** and **Next**  
+* For Identity Type, select **App registration or managed identity (manual)** and **Next**  
+* For **Credential**, select **Secret**
+* For **Scope level**, select **Subscription**
+* For **Subscription ID** and **Subscription name**, enter the subscription ID and name for your Azure Dev subscription you created earlier. You can find this by navigating to your Dev Subscription within zure DevOps. 
+* Under **Authentication** retireve the **Application (client) ID** and **Directory (tenant) ID** from the Azure App Registration you created earlier and enter into these fields. In the example above, this App Registration was called "Azure-ARM-Dev-TFR". 
+* For **Credential**, select **Service principal key**.
+* For **Client secret**, retrieve the value associated with the "Value" field that was auto generated when you created each of your [Service Principals](#certificates-secrets-anchor) above. 
+* For **Service Connection Name**, enter **Azure-ARM-Dev** for our example focused on the dev environment.
+* Check **Grant access permission to all pipelines**, then select **Verify and save**. 
 
-Complete the new service connection configuration using the information from your tenant, subscription, and the service principal you created for Prod.
+Repeat this process and create another prod-specific Service Principal, using your prod subscription, prod azure app registration ("Azure-ARM-Prod-TFR"), and prod service principal.
 
    <p align="left">
-      <img src="./images/ado-service-principal-manual.png" alt="Service connection" width="35%" height="35%"/>
+      <img src="./images/ado_service_connection_config_dev.png" alt="Service connection" width="35%" height="35%"/>
    </p>
 
-Name this service connection **Azure-ARM-Prod**.  Check **Grant access permission to all pipelines**. and click **Verify and save**.
 
 ### Create Azure DevOps Environment
 ---
@@ -357,7 +364,7 @@ To create the prod environment, select **Pipeline** in the left menu and **Envir
       <img src="./images/ado-new-env.png" alt="New environment" width="50%" height="50%"/>
    </p>
 
-Name the new environment `prod` and click **Create**. The environment will initially be empty and indicate "Never deployed" but this status will update after the first deployment.
+Name the new environment `prod` and click **Create**. The environment will initially be empty and indicate "Never deployed" but this status will update after the first deployment. Repeat this step and create a second environment with the name `dev`. 
 
 The configuration of your new ML project repo is complete and you are ready to deploy your Azure Machine Learning infrastructure and deploy ML training and model deployment pipelines in the next section.
 
@@ -368,7 +375,7 @@ Now that your ML project is created, this last section will guide you through ex
 
 Each pipeline may have different roles associated with its deployment and management. For example, infrastructure by your IT team, model training by your data scientists and ML engineers, and model deployment by ML engineers. Likewise, depending on the environments and project branches you have created, you may deploy infrastructure for both **dev** and **prod** Azure ML infrastructure, with data scientists developing the training pipeline in the **dev** environment and branch and, when the model is acceptable, opening a pull request to the **main** branch to merge updates and run the model deployment pipeline in the **prod** environment.
 
-Depending on the options you chose when initializing the project, you should have one infrastructure deployment pipeline, one model training pipeline, and one or two model deployment pipelines in your ML project. Model deployment options are online-endpoint for near real-time scoring and batch-endpoint for batch scoring. To see all pipelines in your project, select the **Pipelines** section from the left navigation menu, then **Pipelines**, then the **All** tab. For the example project in this guide, you should see:
+Depending on the options you chose when initializing the project, you should have one infrastructure deployment pipeline, one model training pipeline, and one model deployment pipelines in your ML project. Model deployment options are online-endpoint for near real-time scoring and batch-endpoint for batch scoring. To see all pipelines in your project, select the **Pipelines** section from the left navigation menu, then **Pipelines**, then the **All** tab. For the example project in this guide, you should see:
 
 
    <p align="left">
@@ -380,9 +387,11 @@ Depending on the options you chose when initializing the project, you should hav
 ### Deploy Azure Machine Learning Infrastructure
 ---
 
-The first task for your ML project is to deploy Azure Machine Learning infrastructure in which to develop your ML code, define your datasets, define your ML pipelines, train models, and deploy your models in production. This pipeline deployment is typically managed by your IT group responsible for ensuring that the subscription is able to create the infrastructure needed. The infarstructure is created by executing the Azure DevOps deploy-infra pipeline. Before doing this, you will customize environment files that define unique Azure resource groups and Azure ML workspaces for your project.
+The first task for your ML project is to deploy Azure Machine Learning infrastructure in which to develop your ML code, define your datasets, define your ML pipelines, train models, and deploy your models in dev. This pipeline deployment is typically managed by your IT group responsible for ensuring that the subscription is able to create the infrastructure needed. The infarstructure is created by executing the Azure DevOps deploy-infra pipeline. Before doing this, you will customize environment files that define unique Azure resource groups and Azure ML workspaces for your project.
 
-To do this, go back to **Repos** and your ML project repo, in this example, `taxi-fare-regression`. You will see two files in the root directory, `config-infra-prod.yml` and `config-infra-dev.yml`.
+To do this, go back to **Repos** and your ML project repo, in this example, `taxi-fare-regression`. Start by creating a branch for your ML project rep (`taxi-fare-regression`), called `dev`. Switch to your `dev` branch. 
+
+You will see two files in the root directory, `config-infra-prod.yml` and `config-infra-dev.yml`.
    
    <p align="center">
             <img src="./images/ado-new-mlrepo.png" alt="Complete ML repo" />
@@ -399,28 +408,30 @@ To do this, go back to **Repos** and your ML project repo, in this example, `tax
 >      * `/mlops-project-template/classical/aml-cli-v2/mlops/azureml/deploy/online/online-deployment.yml`
 > 4. Note in the path above that you need to navigate to the right repository (e.g. **mlops-templates**), and the right ML interface (e.g. **aml-cli-v2**).
 
-Making sure you are in the **main** branch, click on `config-infra-prod.yml` to open it. 
+Making sure you are in the **dev** branch, click on `config-infra-dev.yml` to open it. 
 
 Under the Global section, you will see properties for `namespace`, `postfix`, and `location`.
 
    ```bash
-   # Prod environment
+   # Dev environment
    variables:
       # Global
-      ap_vm_image: ubuntu-20.04
+      ap_vm_image: ubuntu-latest
 
       namespace: mlopsv2 #Note: A namespace with many characters will cause storage account creation to fail due to storage account names having a limit of 24 characters.
-      postfix: 0001
+      postfix: 5463 # For both new projects, and `config-infra-dev.yml` vs `config-infra-prod.yml`, always update this value to something unique, as it may conflict with resources created by other zure accounts using this template. 
       location: eastus
-      environment: prod
+      environment: dev
       enable_aml_computecluster: true
    ```
 
 The two properties `namespace` and `postfix` will be used to construct a unique name for your Azure resource group, Azure ML workspace, and associated resources. The naming convention for your resource group will be `rg-<namespace>-<postfix>prod`. The name of the Azure ML workspace will be `mlw-<namespace>-<postfix>prod`. The `location` property will be the Azure region into which to provision these resources.
    
-Edit `config-infra-prod.yml` to set the variables for your environment. You can clone the repo, edit the file, and push/PR to make the change or select **Edit** in the upper right of the screen to edit the file within Azure DevOps. If editing in place, change `namespace`, `postfix`, and `location` to your preferences and click **Commit**
+Edit `config-infra-dev.yml` to set the variables for your environment. You can clone the repo, edit the file, and push/PR to make the change or select **Edit** in the upper right of the screen to edit the file within Azure DevOps. If editing in place, change `namespace`, `postfix`, and `location` to your preferences and click **Commit**
 
 If the `enable_aml_computecluster` property is set to true, the infra deployment pipeline will pre-create Azure ML compute clusters for your training. In the case of CV or NLP scenarios, it will create both CPU-based and GPU-based compute clusters so ensure that your subscription has GPU compute available. 
+
+Repeat this step for the `config-infra-prod.yml` file within your `dev` branch. 
 
 Now you are ready to run the infrastructure deployment pipeline. Open the **Pipelines** section again and select **New pipeline** in the upper right of the page.
 
@@ -444,7 +455,7 @@ Now you will see the pipeline details.
  Click **Run** to execute the pipeline. This will take a few minutes to finish. When complete, you can view the pipeline jobs and tasks by selecting **Pipelines** then **taxi-fare-regression** under **Recently run pipelines**. 
  
    <p align="center">
-         <img src="./images/ado-infra-pipeline-view.png" alt="Infra pipeline view"/>
+         <img src="./images/ado_bicep_ado_deploy_infra_pipeline.png" alt="Infra pipeline view"/>
    </p>
 
  The pipeline should create the following artifacts which you can view in your Azure subscription:
@@ -520,7 +531,7 @@ To deploy the model training pipeline, open the **Pipelines** section again and 
    - Select **Azure Repos Git**
    - Select the **taxi-fare-regression** repository
    - Select **Existing Azure Pipelines YAML file**
-   - Ensure the selected branch is **main**
+   - Ensure the selected branch is **dev**
    - Select the `/mlops/devops-pipelines/deploy-model-training-pipeline.yml` file in the Path drop-down
    - Click Continue 
 
@@ -545,7 +556,7 @@ Next you can see the pipeline details.
          <img src="./images/ado-training-pipeline-run.png" alt="Training pipeline run"/>
    </p>
    
-Now you can open your Azure Machine Learning workspace to see the training run artifacts. Open a browser to https://ml.azure.com and login with your Azure account. You should see your Azure Machine Learning workspace under the **Workspaces** tab on the left. Your workspace name will have a name built from the options you chose in the `config-infra-prod.yml` file with the format **mlw-(namespace)-(postfix)(environment)**. For example, **mlw-mlopsv2-0001prod**. Click on your workspace. You will be presented with the Azure ML Studio home page for the workspace showing your training pipeline jobs under **Recent jobs**.
+Now you can open your Azure Machine Learning workspace to see the training run artifacts. Open a browser to https://ml.azure.com and login with your Azure account. You should see your Azure Machine Learning workspace under the **Workspaces** tab on the left. Your workspace name will have a name built from the options you chose in the `config-infra-dev.yml` file with the format **mlw-(namespace)-(postfix)(environment)**. For example, **mlw-mlopsv2-5463dev**. Click on your workspace. You will be presented with the Azure ML Studio home page for the workspace showing your training pipeline jobs under **Recent jobs**.
 
    <p align="center">
          <img src="./images/ado-aml-recent-jobs.png" alt="AML recent jobs"/>
@@ -582,13 +593,13 @@ To deploy the model deployment pipeline, open the **Pipelines** section again an
    - Select **Azure Repos Git**
    - Select the **taxi-fare-regression** repository
    - Select **Existing Azure Pipelines YAML file**
-   - Ensure the selected branch is **main**
+   - Ensure the selected branch is **dev**
    - Select `/mlops/devops-pipelines/deploy-online-endpoint-pipeline.yml` or `/mlops/devops-pipelines/deploy-batch-endpoint-pipeline.yml` in the Path drop-down depending on your choice
    - Click Continue 
 
  Again, from the pipeline details path, click **Run** to execute the pipeline. This will take several minutes to finish. When complete, you can view the pipeline jobs and tasks by selecting **Pipelines** then **taxi-fare-regression** under **Recently run pipelines**. The pipeline run will be tagged `#deploy-online-endpoint-pipeline` or `#deploy-batch-endpoint-pipeline`. Drill down into the pipeline run to see the **DeployOnlineEndpoint** or **DeployBatchEndpoint** job and click on the job to see pipeline run details.
 
-Once the deployment pipeline execution is complete, open your Azure Machine Learning workspace to see the deployed endpoints. Select **Endpoints** from the workspace navigation menu on the left. By default, you will see a list of deployed **Online endpoints**. If you chose to deploy the sample online endpoint pipeline, you should see your `taxi-online-(namespace)(postfix)prod` endpoint.
+Once the deployment pipeline execution is complete, open your Azure Machine Learning workspace to see the deployed endpoints. Select **Endpoints** from the workspace navigation menu on the left. By default, you will see a list of deployed **Online endpoints**. If you chose to deploy the sample online endpoint pipeline, you should see your `taxi-online-(namespace)(postfix)dev` endpoint.
 
    <p align="center">
          <img src="./images/ado-online-endpoint.png" alt="Online endpoint"/>
@@ -596,7 +607,7 @@ Once the deployment pipeline execution is complete, open your Azure Machine Lear
 
 Click on this endpoint instance to explore the details of the online endpoint model deployment. 
 
-If you deployed the batch managed endpoint, select **Batch endpoints** on the **Endpoints** page to see your `taxi-batch-(namespace)(postfix)prod` endpoint. Click on this endpoint instance to explore the details of the batch endpoint model deployment. 
+If you deployed the batch managed endpoint, select **Batch endpoints** on the **Endpoints** page to see your `taxi-batch-(namespace)(postfix)dev` endpoint. Click on this endpoint instance to explore the details of the batch endpoint model deployment. 
 
    <p align="center">
          <img src="./images/ado-batch-endpoint.png" alt="Batch endpoint"/>
@@ -610,7 +621,7 @@ For the batch endpoint, you can also select **Compute** and ***Compute clusters*
 
 This section demonstrated use of a pipeline to deploy a trained model to a managed online or managed batch endpoint in Azure Machine Learning.
 
-The single-environment deployment of this MLOps solution accelerator is complete. See the next section for information on adapting this pattern to your use case and broader MLOps practices.
+The multi-environment deployment of this MLOps solution accelerator is complete. See the next section for information on adapting this pattern to your use case and broader MLOps practices.
 
 # MLOps Next Steps
 
